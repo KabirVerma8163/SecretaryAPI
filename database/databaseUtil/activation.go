@@ -13,9 +13,10 @@ import (
 var Client *mongo.Client
 var Ctx context.Context
 var ApiDb *mongo.Database
-var UserDataCollection *mongo.Collection
-var UsersCollection *mongo.Collection
-var LinksListsCollection *mongo.Collection
+var UserDataColl *mongo.Collection
+var UsersColl *mongo.Collection
+var LinksListsColl *mongo.Collection
+var DiscordConnectedAccountsColl *mongo.Collection
 
 //var DiscordLinksListsColl *mongo.Collection
 
@@ -49,9 +50,11 @@ func Start() error {
 	fmt.Println("Connection Secured")
 
 	ApiDb = Client.Database("SecretaryAPI")
-	UsersCollection = ApiDb.Collection("users")
-	UserDataCollection = ApiDb.Collection("user_data")
-	LinksListsCollection = ApiDb.Collection("links_lists")
+	UsersColl = ApiDb.Collection("users")
+	UserDataColl = ApiDb.Collection("user_data")
+	DiscordConnectedAccountsColl = ApiDb.Collection("discord_connected_accounts")
+
+	LinksListsColl = ApiDb.Collection("links_lists")
 
 	return nil
 }

@@ -7,7 +7,7 @@ import (
 
 func IsUniqueUsername(username string) bool {
 	podcast := bson.M{}
-	if err := UsersCollection.FindOne(Ctx, bson.M{"username": username}).Decode(&podcast); err != nil {
+	if err := UsersColl.FindOne(Ctx, bson.M{"username": username}).Decode(&podcast); err != nil {
 		if err.Error() == "mongo: no documents in result" {
 			return true
 		}
@@ -23,7 +23,7 @@ func IsUniqueEmail(email string) bool {
 	//podcast := userType{}
 	//var podcast userType
 	podcast := bson.M{}
-	if err := UsersCollection.FindOne(Ctx, bson.M{"email": email}).Decode(&podcast); err != nil {
+	if err := UsersColl.FindOne(Ctx, bson.M{"email": email}).Decode(&podcast); err != nil {
 		if err.Error() == "mongo: no documents in result" {
 			return true
 		}

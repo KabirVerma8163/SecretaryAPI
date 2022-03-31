@@ -17,7 +17,7 @@ type userType struct {
 	Name             string             `json:"name" bson:"name"`
 	TempUser         bool               `json:"temp_user" bson:"temp_user"`
 	TempUsername     string             `json:"temp_username" bson:"temp_username"`
-	UserDataId       primitive.ObjectID `json:"user_data_id" bson:"user_data_id"`
+	UserDataID       primitive.ObjectID `json:"user_data_id" bson:"user_data_id"`
 	//PasswordSalt     string             `json:"password_salt" bson:"password_salt"`
 }
 
@@ -58,6 +58,19 @@ func (user *userType) initializeUser(userData []byte) (err error) {
 	return nil
 }
 
+func (user *userType) initializeTempDiscordUser(discordData []byte) error {
+	var discord discordAccount
+	err := json.Unmarshal(discordData, &discord)
+	if err != nil {
+		return err
+	}
+
+	user.TempUser = true
+	user.TempUsername = discord.DiscordUsername
+
+	return nil
+}
+
 func (user *userType) initializeDiscordTempUser() (err error) {
 	user.TempUser = true
 	//user.TempUsername =
@@ -73,7 +86,7 @@ func NewUser(userData []byte) (err error) {
 		return err
 	}
 
-	userInsertResult, err := databaseUtil.UsersCollection.InsertOne(databaseUtil.Ctx, user)
+	userInsertResult, err := databaseUtil.UsersColl.InsertOne(databaseUtil.Ctx, user)
 	if err != nil {
 		return err
 	}
@@ -85,14 +98,14 @@ func NewUser(userData []byte) (err error) {
 		return err
 	}
 
-	user.UserDataId, err = newUserData(userArray, user.ID)
+	user.UserDataID, err = newUserData(userArray, user.ID)
 	if err != nil {
 		return err
 	}
 
-	_, err = databaseUtil.UsersCollection.UpdateOne(databaseUtil.Ctx,
+	_, err = databaseUtil.UsersColl.UpdateOne(databaseUtil.Ctx,
 		bson.M{"_id": user.ID}, bson.D{
-			{"$set", bson.D{{"user_data_id", user.UserDataId}}},
+			{"$set", bson.D{{"user_data_id", user.UserDataID}}},
 		},
 	)
 	if err != nil {
@@ -103,7 +116,34 @@ func NewUser(userData []byte) (err error) {
 }
 
 // NewDiscordUser Inserts it into the database and then returns the userData
-//func NewDiscordUser(userData []byte) (err error) {
+func NewDiscordUser(discordData []byte) (err error) {
+	var user userType
+	err = user.initializeTempDiscordUser(discordData)
+
+	userInsertResult, err := databaseUtil.UsersColl.InsertOne(databaseUtil.Ctx, user)
+	if err != nil {
+		return err
+	}
+
+	user.ID = userInsertResult.InsertedID.(primitive.ObjectID)
+
+	userData, err := newTempUserDataFromDiscord(discordData, user.ID)
+	if err != nil {
+		return err
+	}
+
+	_, err = databaseUtil.UsersColl.UpdateOne(databaseUtil.Ctx,
+		bson.M{"_id": user.ID}, bson.D{
+			{"$set", bson.D{{"user_data_id", userData.ID}}},
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 //	var user userType
 //	err = json.Unmarshal(userData, &user)
 //	if err != nil {
@@ -115,7 +155,7 @@ func NewUser(userData []byte) (err error) {
 //		return err
 //	}
 //
-//	userInsertResult, err := databaseUtil.UsersCollection.InsertOne(databaseUtil.Ctx, user)
+//	userInsertResult, err := databaseUtil.UsersColl.InsertOne(databaseUtil.Ctx, user)
 //	if err != nil {
 //		return err
 //	}
@@ -132,7 +172,7 @@ func NewUser(userData []byte) (err error) {
 //		return err
 //	}
 //
-//	_, err = databaseUtil.UsersCollection.UpdateOne(databaseUtil.Ctx,
+//	_, err = databaseUtil.UsersColl.UpdateOne(databaseUtil.Ctx,
 //		bson.M{"_id": user.ID}, bson.D{
 //			{"$set", bson.D{{"user_data_id", user.UserDataId}}},
 //		},

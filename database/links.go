@@ -1,6 +1,7 @@
 package database
 
 import (
+	"LinkingAPI/database/databaseUtil"
 	"encoding/json"
 	guuid "github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -11,26 +12,105 @@ type LinkType struct {
 	Name       string               `json:"link_name" bson:"link_name"`
 	URL        string               `json:"link_url" bson:"link_url"`
 	Type       string               `json:"type" bson:"type"`
-	//Tags       map[string]bool      `json:"link_tags" bson:"link_tags"`
+	Tags       map[string]bool      `json:"link_tags" bson:"link_tags"`
 	Categories []string             `json:"categories" bson:"categories"`
 	Read       bool                 `json:"read" bson:"read"`
 	ReadUsers  []primitive.ObjectID `json:"read_users" bson:"read_users"`
 	//LinkComments     []map[string], probably []LinkComments             `json:"link_comments" bson:"link_comments"`
 }
 
-func NewLink (linkData []byte) (link LinkType, err error) {
+func (link *LinkType) initialize() (err error) {
+	link.LinkID = guuid.New()
+
+	link.URL, err = databaseUtil.CheckUrl(link.URL)
+	if err != nil {
+		return err
+	}
+
+	if link.Name == "" {
+		link.Name = link.URL
+	}
+
+	// TODO: Make sure you make this work properly
+	if link.Tags == nil {
+		link.Tags = map[string]bool{}
+	}
+
+	if link.Categories == nil {
+		link.Categories = []string{}
+	}
+
+	link.Read = false
+
+	link.ReadUsers = []primitive.ObjectID{}
+
+	return nil
+}
+
+func newLink(linkData []byte) (link LinkType, err error) {
 	err = json.Unmarshal(linkData, &link)
 	if err != nil {
 		return LinkType{}, err
 	}
 
-	/*
-	URL must be tested
+	err = link.initialize()
+	if err != nil {
+		return LinkType{}, err
+	}
 
-	LinkID must be changed
-	read must be false
-	read users must be empty
-	*/
-
-	return link, err
+	return link, nil
 }
+
+func newLinks(linksData []byte) (links []LinkType, err error) {
+	err = json.Unmarshal(linksData, &links)
+	if err != nil {
+		return []LinkType{}, nil
+	}
+
+	for _, link := range links {
+		err = link.initialize()
+		if err != nil {
+			return []LinkType{}, err
+		}
+	}
+	return links, nil
+}
+
+func AddLink(linkData []byte, listID primitive.ObjectID, username string) (err error) {
+	userDataID, err := getUserDataIDWithUsername(username)
+	if err != nil {
+		return err
+	}
+
+	err = addLinkToList(listID, userDataID, linkData)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func AddLinkAsDiscordUser(linkData []byte, listID primitive.ObjectID, discordUsername string) (err error) {
+	userDataID, err := getUserDataIDWithDiscordID(discordUsername)
+	if err != nil {
+		return err
+	}
+
+	err = addLinkToList(listID, userDataID, linkData)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+//
+//	/*
+//	URL must be tested
+//
+//	LinkID must be changed
+//	read must be false
+//	read users must be empty
+//	*/
+//
+//	return link, err

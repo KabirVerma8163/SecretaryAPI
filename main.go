@@ -1,10 +1,9 @@
 package main
 
 import (
-	"LinkingAPI/database"
-	"LinkingAPI/database/databaseUtil"
+	"LinkingAPI/share_my_feed/api"
+	"LinkingAPI/share_my_feed/database/databaseUtil"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
 )
 
@@ -55,27 +54,31 @@ func main() {
 	//	fmt.Println(err)
 	//}
 
-	link := []byte(`{
-	"link_name": "fred",
-	"link_url" : "lunar.cf"
-	}`)
-
-	discordID := "545286684007464973"
-
-	listID, err := primitive.ObjectIDFromHex("6243d4aff2dbc8a477d1fa2c")
+	err = api.Start()
 	if err != nil {
 		fmt.Println(err)
 	}
+	//link := []byte(`{
+	//"link_name": "fred",
+	//"link_url" : "lunar.cf"
+	//}`)
+	//
+	//discordID := "545286684007464973"
+	//
+	//listID, err := primitive.ObjectIDFromHex("6243d4aff2dbc8a477d1fa2c")
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
 
-	err = database.AddLinkAsDiscordUser(link, listID, discordID)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	list, err := database.GetListAsDiscordUser(listID, discordID)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	databaseUtil.PrettyPrint(list)
+	//err = database.AddLinkAsDiscordUser(link, listID, discordID)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//
+	//list, err := database.GetListAsDiscordUser(listID, discordID)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//
+	//databaseUtil.PrettyPrint(list)
 }

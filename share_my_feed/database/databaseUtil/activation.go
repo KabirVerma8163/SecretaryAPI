@@ -55,7 +55,6 @@ func Start() error {
 	DiscordConnectedAccountsColl = ApiDb.Collection("discord_connected_accounts")
 
 	LinksListsColl = ApiDb.Collection("links_lists")
-
 	return nil
 }
 

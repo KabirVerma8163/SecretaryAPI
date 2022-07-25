@@ -1,7 +1,7 @@
 package database
 
 import (
-	"LinkingAPI/database/databaseUtil"
+	"LinkingAPI/share_my_feed/database/databaseUtil"
 	"encoding/json"
 	"fmt"
 	"github.com/kamva/mgm"
@@ -25,9 +25,9 @@ type discordAccount struct {
 	OtherDetails         map[string]interface{} `json:"other_details" bson:"other_details"`
 }
 
-// api -> newTempUser -> newUserData -> newDiscordAccount
+// api_redundant -> newTempUser -> newUserData -> newDiscordAccount
 
-func (discord *discordAccount) initialize(userData userDataType) (err error) {
+func (discord *discordAccount) initialize(userData UserDataType) (err error) {
 	//discord.UserID = userData.UserID
 	//discord.UserDataId = userData.ID
 	discord.ClientType = "discord"
@@ -43,7 +43,7 @@ func (discord *discordAccount) initialize(userData userDataType) (err error) {
 	return nil
 }
 
-func newDiscordConnectedAccount(discordData []byte, userData userDataType) (discordID primitive.ObjectID, err error) {
+func newDiscordConnectedAccount(discordData []byte, userData UserDataType) (discordID primitive.ObjectID, err error) {
 	var discord discordAccount
 	err = json.Unmarshal(discordData, &discord)
 	if err != nil {
@@ -61,6 +61,8 @@ func newDiscordConnectedAccount(discordData []byte, userData userDataType) (disc
 
 	discord.ID = accountInsertResult.InsertedID.(primitive.ObjectID)
 
+	discord.OtherDetails = map[string]interface{}{}
+
 	return discord.ID, err
 }
 
@@ -75,13 +77,13 @@ func getDiscordDataIDFromDiscordID(discordID string) (discordAccount, error) {
 	return account, nil
 }
 
-func getUserDataIDWithDiscordID(discordID string) (dataID primitive.ObjectID, err error) {
+func GetUserDataIDWithDiscordID(discordID string) (dataID primitive.ObjectID, err error) {
 	userDataCursor := databaseUtil.DiscordConnectedAccountsColl.FindOne(databaseUtil.Ctx, bson.M{"discord_id": discordID})
 	var discordAcc discordAccount
 	err = userDataCursor.Decode(&discordAcc)
 	if err != nil {
 		if err.Error() == "mongo: no documents in result" {
-			return primitive.ObjectID{}, fmt.Errorf("ServerError: userDataType for given user does not exist")
+			return primitive.ObjectID{}, fmt.Errorf("ServerError: UserDataType for given user does not exist")
 		}
 		return primitive.ObjectID{}, err
 	}

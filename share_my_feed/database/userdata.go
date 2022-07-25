@@ -1,7 +1,7 @@
 package database
 
 import (
-	"LinkingAPI/database/databaseUtil"
+	"LinkingAPI/share_my_feed/database/databaseUtil"
 	"encoding/json"
 	"fmt"
 	"github.com/kamva/mgm"
@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type userDataType struct {
+type UserDataType struct {
 	mgm.DefaultModel  `bson:",inline"`
 	Username          string                        `json:"username" bson:"username"`
 	UserID            primitive.ObjectID            `json:"user_id" bson:"user_id"`
@@ -23,7 +23,7 @@ type userDataType struct {
 	TempUsername      string                        `json:"temp_username" bson:"temp_username"`
 }
 
-func (data *userDataType) initialize(userID primitive.ObjectID) {
+func (data *UserDataType) initialize(userID primitive.ObjectID) {
 	data.LinksList = map[string]primitive.ObjectID{}
 	data.CategoriesList = []string{}
 
@@ -31,7 +31,7 @@ func (data *userDataType) initialize(userID primitive.ObjectID) {
 
 }
 
-func (data *userDataType) initializeDiscordTempUser(discord discordAccount, tempUserID primitive.ObjectID) error {
+func (data *UserDataType) initializeDiscordTempUser(discord discordAccount, tempUserID primitive.ObjectID) error {
 	data.initialize(tempUserID)
 
 	data.TempUser = true
@@ -45,7 +45,7 @@ func (data *userDataType) initializeDiscordTempUser(discord discordAccount, temp
 }
 
 func newUserData(userDataData []byte, userID primitive.ObjectID) (userDataID primitive.ObjectID, err error) {
-	var userData userDataType
+	var userData UserDataType
 	err = json.Unmarshal(userDataData, &userData)
 	if err != nil {
 		return primitive.ObjectID{}, err
@@ -60,7 +60,7 @@ func newUserData(userDataData []byte, userID primitive.ObjectID) (userDataID pri
 	return userDataInsertResult.InsertedID.(primitive.ObjectID), nil
 }
 
-func newTempUserDataFromDiscord(discordData []byte, tempUserID primitive.ObjectID) (userData userDataType, err error) {
+func newTempUserDataFromDiscord(discordData []byte, tempUserID primitive.ObjectID) (userData UserDataType, err error) {
 	var discord discordAccount
 	err = json.Unmarshal(discordData, &discord)
 	if err != nil {
@@ -69,19 +69,19 @@ func newTempUserDataFromDiscord(discordData []byte, tempUserID primitive.ObjectI
 
 	err = userData.initializeDiscordTempUser(discord, tempUserID)
 	if err != nil {
-		return userDataType{}, err
+		return UserDataType{}, err
 	}
 
 	userDataInsertResult, err := databaseUtil.UserDataColl.InsertOne(databaseUtil.Ctx, userData)
 	if err != nil {
-		return userDataType{}, err
+		return UserDataType{}, err
 	}
 
 	userData.ID = userDataInsertResult.InsertedID.(primitive.ObjectID)
 
 	discordID, err := newDiscordConnectedAccount(discordData, userData)
 	if err != nil {
-		return userDataType{}, err
+		return UserDataType{}, err
 	}
 
 	_, err = databaseUtil.UserDataColl.UpdateOne(databaseUtil.Ctx,
@@ -92,25 +92,25 @@ func newTempUserDataFromDiscord(discordData []byte, tempUserID primitive.ObjectI
 	return userData, nil
 }
 
-func getUserDataWithUserID(userID primitive.ObjectID) (data userDataType, err error) {
-	userDataCursor := databaseUtil.UserDataColl.FindOne(databaseUtil.Ctx, bson.M{"_id": userID})
+func GetUserDataWithUserID(userID primitive.ObjectID) (data UserDataType, err error) {
+	userDataCursor := databaseUtil.UserDataColl.FindOne(databaseUtil.Ctx, bson.M{"user_id": userID})
 	err = userDataCursor.Decode(&data)
 	if err != nil {
 		if err.Error() == "mongo: no documents in result" {
-			return userDataType{}, fmt.Errorf("ServerError: userDataType for given user does not exist")
+			return UserDataType{}, fmt.Errorf("ServerError: UserDataType for given user does not exist")
 		}
-		return userDataType{}, err
+		return UserDataType{}, err
 	}
 	return data, err
 }
 
-func getUserDataIDWithUsername(username string) (userDataID primitive.ObjectID, err error) {
+func GetUserDataIDWithUsername(username string) (userDataID primitive.ObjectID, err error) {
 	userDataCursor := databaseUtil.UserDataColl.FindOne(databaseUtil.Ctx, bson.M{"username": username})
-	var userData userDataType
+	var userData UserDataType
 	err = userDataCursor.Decode(&userData)
 	if err != nil {
 		if err.Error() == "mongo: no documents in result" {
-			return primitive.ObjectID{}, fmt.Errorf("ServerError: userDataType for given user does not exist")
+			return primitive.ObjectID{}, fmt.Errorf("ServerError: UserDataType for given user does not exist")
 		}
 		return primitive.ObjectID{}, err
 	}
@@ -118,14 +118,26 @@ func getUserDataIDWithUsername(username string) (userDataID primitive.ObjectID, 
 	return userData.ID, nil
 }
 
-func getUserDataWithUsername(username string) (data userDataType, err error) {
+func GetUserDataWithUsername(username string) (data UserDataType, err error) {
 	userDataCursor := databaseUtil.UserDataColl.FindOne(databaseUtil.Ctx, bson.M{"username": username})
 	err = userDataCursor.Decode(&data)
 	if err != nil {
 		if err.Error() == "mongo: no documents in result" {
-			return userDataType{}, fmt.Errorf("ServerError: userDataType for given user does not exist")
+			return UserDataType{}, fmt.Errorf("ServerError: UserDataType for given user does not exist")
 		}
-		return userDataType{}, err
+		return UserDataType{}, err
+	}
+	return data, err
+}
+
+func getUserData(userDataID primitive.ObjectID) (data UserDataType, err error) {
+	userDataCursor := databaseUtil.UserDataColl.FindOne(databaseUtil.Ctx, bson.M{"_id": userDataID})
+	err = userDataCursor.Decode(&data)
+	if err != nil {
+		if err.Error() == "mongo: no documents in result" {
+			return UserDataType{}, fmt.Errorf("ServerError: UserDataType for given user does not exist")
+		}
+		return UserDataType{}, err
 	}
 	return data, err
 }

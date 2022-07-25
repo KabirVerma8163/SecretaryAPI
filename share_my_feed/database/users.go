@@ -1,7 +1,7 @@
 package database
 
 import (
-	"LinkingAPI/database/databaseUtil"
+	"LinkingAPI/share_my_feed/database/databaseUtil"
 	"encoding/json"
 	"fmt"
 	"github.com/kamva/mgm"

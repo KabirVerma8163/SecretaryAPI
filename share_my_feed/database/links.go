@@ -1,7 +1,7 @@
 package database
 
 import (
-	"LinkingAPI/database/databaseUtil"
+	"LinkingAPI/share_my_feed/database/databaseUtil"
 	"encoding/json"
 	guuid "github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -76,33 +76,29 @@ func newLinks(linksData []byte) (links []LinkType, err error) {
 	return links, nil
 }
 
-func AddLink(linkData []byte, listID primitive.ObjectID, username string) (err error) {
-	userDataID, err := getUserDataIDWithUsername(username)
-	if err != nil {
-		return err
-	}
+//func AddLink(linkData []byte, listID primitive.ObjectID, userDataID primitive.ObjectID) (err error) {
+//
+//	list, err = addLinkToList(listID, userDataID, linkData)
+//	if err != nil {
+//		return err
+//	}
+//
+//	return nil
+//}
 
-	err = addLinkToList(listID, userDataID, linkData)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func AddLinkAsDiscordUser(linkData []byte, listID primitive.ObjectID, discordUsername string) (err error) {
-	userDataID, err := getUserDataIDWithDiscordID(discordUsername)
-	if err != nil {
-		return err
-	}
-
-	err = addLinkToList(listID, userDataID, linkData)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
+//func AddLinkAsDiscordUser(linkData []byte, listID primitive.ObjectID, discordUsername string) (err error) {
+//	userDataID, err := getUserDataIDWithDiscordID(discordUsername)
+//	if err != nil {
+//		return err
+//	}
+//
+//	err = addLinkToList(listID, userDataID, linkData)
+//	if err != nil {
+//		return err
+//	}
+//
+//	return nil
+//}
 
 //
 //	/*

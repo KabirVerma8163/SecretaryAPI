@@ -65,6 +65,7 @@ func (user *userType) initializeTempDiscordUser(discordData []byte) error {
 		return err
 	}
 
+	fmt.Println(discord)
 	user.TempUser = true
 	user.TempUsername = discord.DiscordUsername
 
@@ -119,6 +120,9 @@ func NewUser(userData []byte) (err error) {
 func NewDiscordUser(discordData []byte) (err error) {
 	var user userType
 	err = user.initializeTempDiscordUser(discordData)
+	if err != nil {
+		return err
+	}
 
 	userInsertResult, err := databaseUtil.UsersColl.InsertOne(databaseUtil.Ctx, user)
 	if err != nil {

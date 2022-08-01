@@ -17,7 +17,7 @@ type LinksList struct {
 	AccessIds         map[primitive.ObjectID][]string `json:"access_ids" bson:"access_ids"` // Must be userDataIDs
 	ListName          string                          `json:"list_name" bson:"list_name"`
 	Links             []LinkType                      `json:"links" bson:"links"`
-	Categories        []string                        `json:"categories" bson:"categories"`
+	Categories        []string                        `json:"list_categories" bson:"list_categories"`
 	LinkAccessibility string                          `json:"link_accessibility" bson:"link_accessibility"`
 	Description       string                          `json:"description" bson:"description"`
 }
@@ -61,7 +61,7 @@ func getList(listID, dataID primitive.ObjectID) (list LinksList, err error) {
 	err = listCursor.Decode(&list)
 	if err != nil {
 		if err.Error() == "mongo: no documents in result" {
-			return LinksList{}, fmt.Errorf("NoUserFound: userType with the given Id does not exist")
+			return LinksList{}, fmt.Errorf("NoUserFound: List with the given Id does not exist")
 		}
 		return LinksList{}, err
 	}
@@ -79,6 +79,7 @@ func getList(listID, dataID primitive.ObjectID) (list LinksList, err error) {
 
 func GetLists(dataID primitive.ObjectID) (lists []LinksList, err error) {
 	userData, err := getUserData(dataID)
+	//fmt.Println(userData.LinksList)
 	for _, l := range userData.LinksList {
 		list, err := getList(l, dataID)
 		if err != nil {
@@ -86,7 +87,7 @@ func GetLists(dataID primitive.ObjectID) (lists []LinksList, err error) {
 		}
 		lists = append(lists, list)
 	}
-
+	//fmt.Println("length of lists:", len(lists))
 	return lists, nil
 }
 
@@ -139,10 +140,10 @@ func AddList(list LinksList, dataID primitive.ObjectID) (err error) {
 	}
 
 	listID, err := addListToDB(list)
-
+	//fmt.Println("listID", listID)
 	_, err = databaseUtil.UserDataColl.UpdateOne(databaseUtil.Ctx,
 		bson.M{"_id": list.UserDataId}, bson.D{
-			{"$push", bson.D{{"links_list", listID}}},
+			{"$set", bson.D{{fmt.Sprintf("links_list.%s", list.ListName), listID}}},
 		})
 	if err != nil {
 		return err

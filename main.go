@@ -2,6 +2,7 @@ package main
 
 import (
 	"LinkingAPI/share_my_feed/api"
+	"LinkingAPI/share_my_feed/database"
 	"LinkingAPI/share_my_feed/database/databaseUtil"
 	"fmt"
 	"log"
@@ -53,7 +54,7 @@ func main() {
 	//if err != nil {
 	//	fmt.Println(err)
 	//}
-
+	database.DiscordCacheInit()
 	err = api.Start()
 	if err != nil {
 		fmt.Println(err)

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/joho/godotenv"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"io"
 	"io/ioutil"
 	"log"
@@ -23,6 +22,8 @@ universal wrapper checks the request and makes sure it is valid for each kind of
 <Type>Functions is the map of functions and their addresses and is added to each individual file.
 */
 
+var allCommands map[string]command
+
 func Start() error {
 	err := godotenv.Load(".env")
 	if err != nil {
@@ -30,22 +31,21 @@ func Start() error {
 	}
 	DiscordPassword = os.Getenv("DISCORD_PASSWORD")
 
-	//http.HandleFunc("/test", test)
-	//
-	//http.Handle("/list", listWrapper(CreateList))
-	//http.Handle("/test", UniversalWrapper(testWrapper, test))
-
 	ListHandler := listHandler{}
 	ListHandler.initialize()
 	for k, v := range ListHandler.ListsFunctions {
-		http.Handle(k, UniversalWrapper(listWrapper, v))
+		http.Handle("/"+k, UniversalWrapper(listWrapper, v))
 	}
 
 	UserHandler := userHandler{}
 	UserHandler.initialize()
 	for k, v := range UserHandler.UsersFunctions {
-		http.Handle(k, UniversalWrapper(listWrapper, v))
+		http.Handle("/"+k, UniversalWrapper(userWrapper, v))
 	}
+
+	http.HandleFunc("/test", func(writer http.ResponseWriter, r *http.Request) {
+		fmt.Println(r.Body)
+	})
 
 	log.Fatalln(http.ListenAndServe(":8000", nil))
 
@@ -74,25 +74,72 @@ func UniversalWrapper(wrapper func(http.ResponseWriter, *http.Request, func(http
 						}
 
 						var unwrapper UnWrapper
-						err = json.Unmarshal(dataBytes, &unwrapper)
+						err = unwrapper.initialize(dataBytes)
 						if err != nil {
 							w.WriteHeader(http.StatusBadRequest)
 							return
 						}
 
+						if r.URL.Path == "/users/New-discord" {
+							_, err := database.GetUserDataIDWithDiscordID(unwrapper.DiscordID)
+							if err == nil {
+								unwrapper.Error = "RequestError: User already has an account"
+								data, err := json.Marshal(unwrapper)
+								if err != nil {
+									w.WriteHeader(http.StatusInternalServerError)
+									return
+								}
+
+								body, err := ioutil.ReadAll(r.Body)
+								if err != nil {
+									w.WriteHeader(http.StatusInternalServerError)
+									return
+								}
+
+								body = append(body, data...)
+								//fmt.Println(string(body))
+								r.Body = io.NopCloser(bytes.NewReader(data))
+								w.WriteHeader(http.StatusNotFound)
+								w.Header().Set("Content-Type", "application/json")
+								_, err = w.Write(data)
+								if err != nil {
+									w.WriteHeader(http.StatusBadRequest)
+								}
+								return
+							}
+						}
+
 						userDataID, err := database.GetUserDataIDWithDiscordID(unwrapper.DiscordID)
 						if err != nil {
-							if err.Error() == "ServerError: userDataType for given user does not exist" {
-								// What happens if the user account does not exist.
-								// TODO
-								//responseString := []byte(`{}`)
-								//_, err = w.Write(responseString)
-								//if err != nil {
-								//	w.WriteHeader(http.StatusInternalServerError)
-								//}
+							if err.Error() == "ServerError: UserDataType for given user does not exist" && r.URL.Path != "/users/New-discord" {
+								unwrapper.Error = "ServerError: UserDataType for given user does not exist"
+								data, err := json.Marshal(unwrapper)
+								if err != nil {
+									w.WriteHeader(http.StatusInternalServerError)
+									return
+								}
+
+								body, err := ioutil.ReadAll(r.Body)
+								if err != nil {
+									w.WriteHeader(http.StatusInternalServerError)
+									return
+								}
+
+								body = append(body, data...)
+								//fmt.Println(string(body))
+								r.Body = io.NopCloser(bytes.NewReader(data))
+								w.WriteHeader(http.StatusNotFound)
+								w.Header().Set("Content-Type", "application/json")
+								_, err = w.Write(data)
+								if err != nil {
+									w.WriteHeader(http.StatusBadRequest)
+								}
+								return
+							} else if r.URL.Path != "/users/New-discord" {
+								w.WriteHeader(http.StatusNotFound)
+								return
 							}
-							w.WriteHeader(http.StatusNotFound)
-							return
+
 						}
 						unwrapper.UserDataID = userDataID
 
@@ -127,26 +174,4 @@ func UniversalWrapper(wrapper func(http.ResponseWriter, *http.Request, func(http
 			w.WriteHeader(http.StatusBadRequest)
 		}
 	})
-}
-
-type UnWrapper struct {
-	DiscordID  string             `json:"discord_id"`
-	Username   string             `json:"username"`
-	UserDataID primitive.ObjectID `json:"user_data_id" json:"owner_data_id"`
-}
-
-func test(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Ryan sent a request")
-
-	body := r.Body
-	bodyBytes, err := ioutil.ReadAll(body)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	fmt.Println(bodyBytes)
-}
-
-func testWrapper(w http.ResponseWriter, r *http.Request, endpoint func(http.ResponseWriter, *http.Request)) {
-	endpoint(w, r)
 }

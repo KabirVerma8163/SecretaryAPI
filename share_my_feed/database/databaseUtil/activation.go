@@ -18,8 +18,6 @@ var UsersColl *mongo.Collection
 var LinksListsColl *mongo.Collection
 var DiscordConnectedAccountsColl *mongo.Collection
 
-//var DiscordLinksListsColl *mongo.Collection
-
 func Start() error {
 	var err error
 	//URI := os.Getenv("TEST_MGM_URL")

@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -32,6 +33,7 @@ func ClearAllCollections() error {
 }
 
 func PrettyPrint(x interface{}) {
+	fmt.Println(time.Now())
 	b, err := json.MarshalIndent(x, "", "  ")
 	if err != nil {
 		fmt.Println("error:", err)

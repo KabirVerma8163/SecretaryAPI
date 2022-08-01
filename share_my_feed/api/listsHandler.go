@@ -13,11 +13,36 @@ type listHandler struct {
 	ListsFunctions map[string]func(w http.ResponseWriter, r *http.Request)
 }
 
+var listsCommands []command
+var getListsCommand command
+var makeListCommand command
+
 func (handler *listHandler) initialize() {
 	handler.ListsFunctions = map[string]func(w http.ResponseWriter, r *http.Request){}
-	handler.ListsFunctions["lists/Make-list"] = makeList
-	handler.ListsFunctions["lists/Get-lists"] = getLists
-	fmt.Println(handler)
+
+	getListsCommand = command{
+		Address:         "lists/Get-lists",
+		AccountSpecific: true,
+		Testing:         false,
+		Function:        getLists,
+	}
+	makeListCommand = command{
+		Address:         "lists/Make-list",
+		AccountSpecific: true,
+		Testing:         false,
+		Function:        makeList,
+	}
+
+	listsCommands = []command{
+		getListsCommand,
+		makeListCommand,
+	}
+
+	for _, v := range listsCommands {
+		handler.ListsFunctions[v.Address] = v.Function
+		allCommands["/"+v.Address] = v
+	}
+
 }
 
 func listWrapper(w http.ResponseWriter, r *http.Request, endpoint func(http.ResponseWriter, *http.Request)) {
@@ -43,7 +68,6 @@ func listWrapper(w http.ResponseWriter, r *http.Request, endpoint func(http.Resp
 //}
 
 func getLists(w http.ResponseWriter, r *http.Request) {
-	//fmt.Println("I got till here.")
 	bodyBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -54,24 +78,35 @@ func getLists(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 	}
-
 	lists, err := database.GetLists(list.UserDataId)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
 
+	fmt.Println("We got the lists.")
 	databaseUtil.PrettyPrint(lists)
+	//fmt.Println(lists)
+	data2 := map[string]interface{}{
+		"lists": lists}
 
-	fmt.Println("WE got the lists")
-	data, err := json.Marshal(lists)
+	data, err := json.Marshal(data2)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	fmt.Println(string(data[:]))
 
 	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(data)
-
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
 	//var user thing
 	//err = json.Unmarshal(bodyBytes, &thi)
 	//fmt.Println(thi.DiscordUsername)
 }
 
 func makeList(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Making a new list")
 	bodyBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -79,9 +114,16 @@ func makeList(w http.ResponseWriter, r *http.Request) {
 
 	var list database.LinksList
 	err = json.Unmarshal(bodyBytes, &list)
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+	//databaseUtil.PrettyPrint(list)
+
+	err = database.AddList(list, list.UserDataId)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 	}
 
-	databaseUtil.PrettyPrint(list)
+	w.WriteHeader(http.StatusAccepted)
 }

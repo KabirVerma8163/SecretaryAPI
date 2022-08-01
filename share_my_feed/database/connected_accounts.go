@@ -25,6 +25,14 @@ type discordAccount struct {
 	OtherDetails         map[string]interface{} `json:"other_details" bson:"other_details"`
 }
 
+var discordConnectedAccountsCache map[string]discordAccount
+
+// Bootleg solution to a problme I don't wanna fix rn
+
+func DiscordCacheInit() {
+	discordConnectedAccountsCache = map[string]discordAccount{}
+}
+
 // api_redundant -> newTempUser -> newUserData -> newDiscordAccount
 
 func (discord *discordAccount) initialize(userData UserDataType) (err error) {
@@ -66,26 +74,38 @@ func newDiscordConnectedAccount(discordData []byte, userData UserDataType) (disc
 	return discord.ID, err
 }
 
-func getDiscordDataIDFromDiscordID(discordID string) (discordAccount, error) {
-	accountCursor := databaseUtil.DiscordConnectedAccountsColl.FindOne(databaseUtil.Ctx, bson.M{"discord_id": discordID})
-	var account discordAccount
-	err := accountCursor.Decode(&account)
-	if err != nil {
-		return discordAccount{}, err
-	}
-
-	return account, nil
-}
+//func getDiscordDataIDFromDiscordID(discordID string) (discordAccount, error) {
+//	var account discordAccount
+//	account, ok := discordConnectedAccountsCache[discordID]
+//	if !ok {
+//		accountCursor := databaseUtil.DiscordConnectedAccountsColl.FindOne(databaseUtil.Ctx, bson.M{"discord_id": discordID})
+//		err := accountCursor.Decode(&account)
+//		if err != nil {
+//			return discordAccount{}, err
+//		}
+//	} else {
+//
+//	}
+//
+//	return account, nil
+//}
 
 func GetUserDataIDWithDiscordID(discordID string) (dataID primitive.ObjectID, err error) {
-	userDataCursor := databaseUtil.DiscordConnectedAccountsColl.FindOne(databaseUtil.Ctx, bson.M{"discord_id": discordID})
-	var discordAcc discordAccount
-	err = userDataCursor.Decode(&discordAcc)
-	if err != nil {
-		if err.Error() == "mongo: no documents in result" {
-			return primitive.ObjectID{}, fmt.Errorf("ServerError: UserDataType for given user does not exist")
+	var account discordAccount
+	account, ok := discordConnectedAccountsCache[discordID]
+	if !ok {
+		userDataCursor := databaseUtil.DiscordConnectedAccountsColl.FindOne(databaseUtil.Ctx, bson.M{"discord_id": discordID})
+		var discordAcc discordAccount
+		err = userDataCursor.Decode(&discordAcc)
+		if err != nil {
+			if err.Error() == "mongo: no documents in result" {
+				return primitive.ObjectID{}, fmt.Errorf("ServerError: UserDataType for given user does not exist")
+			}
+			return primitive.ObjectID{}, err
 		}
-		return primitive.ObjectID{}, err
+		account = discordAcc
+		discordConnectedAccountsCache[discordID] = account
 	}
-	return discordAcc.UserDataID, err
+
+	return account.UserDataID, err
 }

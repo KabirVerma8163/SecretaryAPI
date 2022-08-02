@@ -31,6 +31,8 @@ func Start() error {
 	}
 	DiscordPassword = os.Getenv("DISCORD_PASSWORD")
 
+	allCommands = map[string]command{}
+
 	ListHandler := listHandler{}
 	ListHandler.initialize()
 	for k, v := range ListHandler.ListsFunctions {
@@ -67,95 +69,74 @@ func UniversalWrapper(wrapper func(http.ResponseWriter, *http.Request, func(http
 							return
 						}
 
-						dataBytes, err := ioutil.ReadAll(r.Body)
-						if err != nil {
-							w.WriteHeader(http.StatusBadRequest)
-							return
-						}
-
 						var unwrapper UnWrapper
-						err = unwrapper.initialize(dataBytes)
+						err := unwrapper.initialize(r)
 						if err != nil {
 							w.WriteHeader(http.StatusBadRequest)
 							return
 						}
 
-						if r.URL.Path == "/users/New-discord" {
-							_, err := database.GetUserDataIDWithDiscordID(unwrapper.DiscordID)
-							if err == nil {
+						command, ok := allCommands[r.URL.Path]
+						if !ok {
+							w.WriteHeader(http.StatusNotFound)
+							return
+						}
+
+						userDataID, errUserData := database.GetUserDataIDWithDiscordID(unwrapper.DiscordID)
+						if command.Address == "users/New-discord" {
+							if errUserData == nil {
 								unwrapper.Error = "RequestError: User already has an account"
-								data, err := json.Marshal(unwrapper)
+								data, err := dataMarshall(unwrapper, r)
 								if err != nil {
-									w.WriteHeader(http.StatusInternalServerError)
+									w.WriteHeader(http.StatusBadRequest)
 									return
 								}
 
-								body, err := ioutil.ReadAll(r.Body)
-								if err != nil {
-									w.WriteHeader(http.StatusInternalServerError)
-									return
-								}
-
-								body = append(body, data...)
-								//fmt.Println(string(body))
 								r.Body = io.NopCloser(bytes.NewReader(data))
 								w.WriteHeader(http.StatusNotFound)
 								w.Header().Set("Content-Type", "application/json")
 								_, err = w.Write(data)
 								if err != nil {
 									w.WriteHeader(http.StatusBadRequest)
+									return
 								}
 								return
 							}
-						}
+						} else if command.AccountSpecific {
+							if errUserData != nil {
+								if err.Error() == "ServerError: UserDataType for given user does not exist" {
+									unwrapper.Error = "ServerError: UserDataType for given user does not exist"
+									data, err := dataMarshall(unwrapper, r)
+									if err != nil {
+										w.WriteHeader(http.StatusBadRequest)
+										return
+									}
 
-						userDataID, err := database.GetUserDataIDWithDiscordID(unwrapper.DiscordID)
-						if err != nil {
-							if err.Error() == "ServerError: UserDataType for given user does not exist" && r.URL.Path != "/users/New-discord" {
-								unwrapper.Error = "ServerError: UserDataType for given user does not exist"
-								data, err := json.Marshal(unwrapper)
-								if err != nil {
-									w.WriteHeader(http.StatusInternalServerError)
+									r.Body = io.NopCloser(bytes.NewReader(data))
+									w.WriteHeader(http.StatusNotFound)
+									w.Header().Set("Content-Type", "application/json")
+
+									_, err = w.Write(data)
+									if err != nil {
+										w.WriteHeader(http.StatusBadRequest)
+										return
+									}
+									return
+								} else {
+									w.WriteHeader(http.StatusNotFound)
 									return
 								}
-
-								body, err := ioutil.ReadAll(r.Body)
-								if err != nil {
-									w.WriteHeader(http.StatusInternalServerError)
-									return
-								}
-
-								body = append(body, data...)
-								//fmt.Println(string(body))
-								r.Body = io.NopCloser(bytes.NewReader(data))
-								w.WriteHeader(http.StatusNotFound)
-								w.Header().Set("Content-Type", "application/json")
-								_, err = w.Write(data)
-								if err != nil {
-									w.WriteHeader(http.StatusBadRequest)
-								}
-								return
-							} else if r.URL.Path != "/users/New-discord" {
-								w.WriteHeader(http.StatusNotFound)
-								return
 							}
+							unwrapper.UserDataID = userDataID
+						} else {
 
 						}
-						unwrapper.UserDataID = userDataID
 
-						data, err := json.Marshal(unwrapper)
+						data, err := dataMarshall(unwrapper, r)
 						if err != nil {
-							w.WriteHeader(http.StatusInternalServerError)
+							w.WriteHeader(http.StatusBadRequest)
 							return
 						}
-
-						body, err := ioutil.ReadAll(r.Body)
-						if err != nil {
-							w.WriteHeader(http.StatusInternalServerError)
-							return
-						}
-
-						body = append(body, data...)
 						r.Body = io.NopCloser(bytes.NewReader(data))
 
 						wrapper(w, r, endpoint)
@@ -174,4 +155,20 @@ func UniversalWrapper(wrapper func(http.ResponseWriter, *http.Request, func(http
 			w.WriteHeader(http.StatusBadRequest)
 		}
 	})
+}
+
+func dataMarshall(unwrapper UnWrapper, r *http.Request) ([]byte, error) {
+	data, err := json.Marshal(unwrapper)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	body = append(body, data...)
+	//fmt.Println(string(body))
+	return data, nil
 }

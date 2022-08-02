@@ -42,8 +42,13 @@ type command struct {
 	Function        func(http.ResponseWriter, *http.Request)
 }
 
-func (unwrapper *UnWrapper) initialize(dataBytes []byte) error {
-	err := json.Unmarshal(dataBytes, &unwrapper)
+func (unwrapper *UnWrapper) initialize(r *http.Request) error {
+	dataBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(dataBytes, &unwrapper)
 
 	unwrapper.Error = ""
 	if err != nil {
@@ -51,6 +56,18 @@ func (unwrapper *UnWrapper) initialize(dataBytes []byte) error {
 	}
 	return nil
 }
+
+//func (unwrapper *UnWrapper) initialize(dataBytes []byte) error {
+//	err := json.Unmarshal(dataBytes, &unwrapper)
+//
+//	unwrapper.Error = ""
+//	if err != nil {
+//		return err
+//	}
+//	return nil
+//}
+
+//func (unwrapper *UnWrapper) unwrapping() error{}
 
 func test(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Ryan sent a request")

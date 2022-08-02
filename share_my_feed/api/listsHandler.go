@@ -13,7 +13,7 @@ type listHandler struct {
 	ListsFunctions map[string]func(w http.ResponseWriter, r *http.Request)
 }
 
-var listsCommands []command
+var listCommands []command
 var getListsCommand command
 var makeListCommand command
 
@@ -33,12 +33,12 @@ func (handler *listHandler) initialize() {
 		Function:        makeList,
 	}
 
-	listsCommands = []command{
+	listCommands = []command{
 		getListsCommand,
 		makeListCommand,
 	}
 
-	for _, v := range listsCommands {
+	for _, v := range listCommands {
 		handler.ListsFunctions[v.Address] = v.Function
 		allCommands["/"+v.Address] = v
 	}

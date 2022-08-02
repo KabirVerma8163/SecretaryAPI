@@ -11,9 +11,27 @@ type userHandler struct {
 	UsersFunctions map[string]func(w http.ResponseWriter, r *http.Request)
 }
 
+var userCommands []command
+var newDiscordUserCommand command
+
 func (handler *userHandler) initialize() {
 	handler.UsersFunctions = map[string]func(w http.ResponseWriter, r *http.Request){}
-	handler.UsersFunctions["users/New-discord"] = newDiscordUser
+
+	newDiscordUserCommand = command{
+		Address:         "users/New-discord",
+		AccountSpecific: false,
+		Testing:         false,
+		Function:        newDiscordUser,
+	}
+
+	userCommands = []command{
+		newDiscordUserCommand,
+	}
+
+	for _, v := range userCommands {
+		handler.UsersFunctions[v.Address] = v.Function
+		allCommands["/"+v.Address] = v
+	}
 }
 
 func userWrapper(w http.ResponseWriter, r *http.Request, endpoint func(http.ResponseWriter, *http.Request)) {
